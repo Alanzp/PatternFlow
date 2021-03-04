@@ -1,0 +1,7 @@
+# Windows:
+res
+save
+view
+
+# Python:
+__pycache__
