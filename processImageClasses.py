@@ -159,3 +159,24 @@ class TraceColor():
         mask = cv2.inRange(hsv_img, lowColor, upperColor)
         output = cv2.bitwise_and(hsv_img, hsv_img, mask=mask)
         return output
+
+
+class BilateralFilter():
+    def __init__(self):
+        # 参数0是初始值，参数1是参数范围
+        self.args = {
+            "d": [1, (0, 10)],
+            "sigmaColor": [5, (1, 100)],
+            "sigmaSpace": [5, (1, 100)],
+        }
+
+    def outputStr(self):
+        outputStr = ""
+        for arg in self.args.keys():
+            outputStr += arg + str(self.args[arg][0]) + ";"
+        return outputStr
+
+    def process(self, inputImage_BGR):
+        output = cv2.bilateralFilter(inputImage_BGR, self.args["d"][0], self.args["sigmaColor"][0],
+                                     self.args["sigmaSpace"][0])
+        return output

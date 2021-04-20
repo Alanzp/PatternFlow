@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtCore import QTimer, Qt, pyqtSignal
 from PyQt5.QtGui import QImage, QPixmap
 
 from mainView import Ui_MainWindow
@@ -11,6 +11,23 @@ from pathlib import Path
 import processImageClasses
 import matplotlib.pyplot as plt
 import inspect
+from PyQt5.Qt import QThread
+
+
+class My_Thread(QThread):
+    sinOut = pyqtSignal()
+
+    def __init__(self, process_func, img):
+        super().__init__()
+        self.img = img
+        self.process_func = process_func
+
+    # def __del__(self):
+    #     self.wait()
+
+    def run(self):
+        self.outputImg = self.process_func(self.img)
+        self.sinOut.emit()
 
 
 # To solve cv2 can not read path contain Chinese words
@@ -117,6 +134,8 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
             self.imagePaths.extend(
                 [path for path in Path(directory).rglob(suffix)])
         print(self.imagePaths)
+        if len(self.imagePaths) == 0:
+            return
         for item in self.imagePaths:
             self.listWidget.addItem(str(item.relative_to(self.inputDir)))
         self.listWidget.itemAt(0, 0).setSelected(True)
@@ -159,11 +178,15 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
     def processImage(self):
         if not hasattr(self, "inputImage_BGR"):
             return
-        self.outputImage_BGR = self.processMethod(self.inputImage_BGR)
-        self.outputImage_RGB = cv2.cvtColor(self.outputImage_BGR,
-                                            cv2.COLOR_BGR2RGB)
+        # self.outputImage_BGR = self.threadProcess.run(self.inputImage_BGR)
+        # self.outputImage_BGR = self.processMethod(self.inputImage_BGR)
+        if hasattr(self, "worker"):
+            self.worker.wait()
+        self.worker = My_Thread(self.processMethod, self.inputImage_BGR)
+        self.worker.finished.connect(self.showOutputImage)
+        self.worker.start()
         self.label_4.setText(self.ImageWorker.outputStr())
-        self.showOutputImage()
+        # self.showOutputImage()
 
     def doSave(self, fileName, imageSave):
         saveRoot = self.label_6.text()
@@ -187,6 +210,7 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
         for index, path in enumerate(self.imagePaths):
             raletivePath = path.relative_to(self.inputDir)
             img = cv_imread(path)
+
             img = self.processMethod(img)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             saveDir = saveRoot.joinpath(raletivePath).parent
@@ -233,6 +257,13 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
             self.processImage()
 
     def showOutputImage(self):
+        if not hasattr(self, "worker"):
+            return
+        if not hasattr(self.worker, "outputImg"):
+            return
+        self.outputImage_BGR = self.worker.outputImg
+        self.outputImage_RGB = cv2.cvtColor(self.outputImage_BGR,
+                                            cv2.COLOR_BGR2RGB)
         if not hasattr(self, "outputImage_RGB"):
             return
         rows, cols, channels = self.outputImage_RGB.shape
