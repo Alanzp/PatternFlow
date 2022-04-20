@@ -47,7 +47,6 @@ class CannyLine():
     def process(self, inputImage_BGR):
         th1 = self.args["threshold1"][0]
         th2 = self.args["threshold2"][0]
-        print(th1, th2)
         grayImage = cv2.Canny(inputImage_BGR, th1, th2)
         output = cv2.cvtColor(grayImage, cv2.COLOR_GRAY2BGR)
         return output
@@ -177,6 +176,57 @@ class BilateralFilter():
         return outputStr
 
     def process(self, inputImage_BGR):
-        output = cv2.bilateralFilter(inputImage_BGR, self.args["d"][0], self.args["sigmaColor"][0],
+        output = cv2.bilateralFilter(inputImage_BGR, self.args["d"][0],
+                                     self.args["sigmaColor"][0],
                                      self.args["sigmaSpace"][0])
         return output
+
+
+class contourPoint():
+    def __init__(self):
+        # 参数0是初始值，参数1是参数范围
+        self.args = {
+            "pointSize": [5, (3, 100)],
+            "pointCount": [7, (3, 100)],
+            "blurCoreSize": [5, (3, 100)],
+            "erodeCoreSize": [7, (3, 100)]
+        }
+
+    def outputStr(self):
+        outputStr = ""
+        for arg in self.args.keys():
+            outputStr += arg + str(self.args[arg][0]) + ";"
+        return outputStr
+
+    def process(self, inputImage_BGR):
+        ycrcb = cv2.cvtColor(inputImage_BGR,
+                             cv2.COLOR_BGR2YCrCb)  # 把图像转换到YUV色域
+        (y, cr, cb) = cv2.split(ycrcb)  # 图像分割, 分别获取y, cr, br通道图像
+        blurCoreSize = self.args["blurCoreSize"][0] // 2 * 2 + 1
+        erodeCoreSize = self.args["erodeCoreSize"][0] // 2 * 2 + 1
+        pointCount = self.args["pointCount"][0]
+        pointSize = self.args["pointSize"][0]
+        cr1 = cv2.GaussianBlur(cr, (blurCoreSize, blurCoreSize), 0)
+        _, skin1 = cv2.threshold(cr1, 0, 255,
+                                 cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        size = erodeCoreSize
+        kernel = np.ones((size, size), dtype=np.uint8)
+        erode_img = cv2.erode(skin1, kernel)
+        skin2 = cv2.dilate(erode_img, kernel)
+        contours, _ = cv2.findContours(skin2, cv2.RETR_TREE,
+                                       cv2.CHAIN_APPROX_NONE)
+        maxcont = contours[0]
+        for cont in contours:
+            if cont.shape[0] > maxcont.shape[0]:
+                maxcont = cont
+        step = int(maxcont.shape[0] / pointCount)
+        contour = maxcont[::step]
+        outImage = inputImage_BGR.copy()
+        for point in contour:
+            cv2.circle(outImage, (point[0][0], point[0][1]), pointSize,
+                       (0, 0, 255), pointSize)
+        M = cv2.moments(maxcont)
+        cv2.circle(outImage,
+                   (int(M['m10'] / M['m00']), int(M['m01'] / M['m00'])),
+                   pointSize, (255, 0, 0), pointSize)
+        return outImage
