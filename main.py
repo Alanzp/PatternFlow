@@ -97,7 +97,8 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
         self.listWidget.itemAt(0, 0).setSelected(True)
 
     def OpenDir(self):
-        directory = QFileDialog.getExistingDirectory(self, "Select directory", r"./")
+        directory = QFileDialog.getExistingDirectory(self, "Select directory",
+                                                     r"./")
         self.listWidget.clear()
         if not directory:
             return
