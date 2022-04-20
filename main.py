@@ -6,13 +6,12 @@ from PyQt5.QtGui import QPixmap
 
 from mainView import Ui_MainWindow
 from pathlib import Path
-import time
 import processer
 from load.camera import Camera
 from util.thread import MyThread
 from load.file import importImageFile, getImagePaths
 from util.image import convertBGR2RGB, imageFormatForShow
-from export.localFile import doSaveLocalFile
+from export.localFile import doSaveLocalFile, genCaptureFileName
 
 
 class PyQtMainEntry(QMainWindow, Ui_MainWindow):
@@ -87,7 +86,7 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
 
     def OpenFile(self):
         fileName, _ = QFileDialog.getOpenFileName(
-            self, "选取文件", "./",
+            self, "Select File", "./",
             "IMAGE Files (*.png;*.jpg;" + "*jpe;*jpeg:*bmp);; All Files (*)")
         if not fileName:
             return
@@ -98,7 +97,7 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
         self.listWidget.itemAt(0, 0).setSelected(True)
 
     def OpenDir(self):
-        directory = QFileDialog.getExistingDirectory(self, "选取文件夹", r"./")
+        directory = QFileDialog.getExistingDirectory(self, "Select directory", r"./")
         self.listWidget.clear()
         if not directory:
             return
@@ -119,8 +118,7 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
     def capture(self):
         img = self.cap.getCurrentFrame()
         if img is not None:
-            self.filePath = Path("./").joinpath("capture_{}".format(
-                int(time.time())))
+            self.filePath = Path("./").joinpath(genCaptureFileName())
             self.inputImage_BGR = img
             self.inputImage_RBG = convertBGR2RGB(img)
             self.showInputImage()
@@ -160,7 +158,7 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
                         self.outputImage_RGB)
 
     def changeSaveDir(self):
-        directory = QFileDialog.getExistingDirectory(self, "选取文件夹",
+        directory = QFileDialog.getExistingDirectory(self, "Select directory",
                                                      self.label_6.text())
         self.label_6.setText(directory)
 
@@ -178,7 +176,7 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
             doSaveLocalFile(self.label_6.text(),
                             fileName=raletivePath,
                             imageSave=img)
-            print("已完成{:.2f}%".format((index + 1) / filesCount * 100))
+            print("complete {:.2f}%".format((index + 1) / filesCount * 100))
 
     def setProcessAuto(self):
         if self.autoProcessImage:
