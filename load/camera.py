@@ -9,8 +9,8 @@ class Camera:
         if self.capture.isOpened():
             # Get one frame
             _, img = self.capture.read()
-            # Mirror flip
-            cv2.flip(img, 1)
+            # # Mirror flip
+            img = cv2.flip(img, 1)
             return img
         return None
 
