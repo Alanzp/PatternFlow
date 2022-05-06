@@ -69,9 +69,11 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
             QLayout.addWidget(Label)
             spinBox = QtWidgets.QSpinBox(group)
             spinBox.setObjectName(argName)
-            spinBox.setValue(self.args[argName].getCurrent())
+            spinBox.setRange(self.args[argName].getMin(),
+                             self.args[argName].getMax())
             spinBox.setMinimum(self.args[argName].getMin())
             spinBox.setMaximum(self.args[argName].getMax())
+            spinBox.setValue(self.args[argName].getCurrent())
             spinBox.valueChanged.connect(self.SpinValueChange)
             QLayout.addWidget(spinBox)
             row = i // MaxCol
@@ -155,7 +157,15 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
             "|process time cost(ms):{:.2f}".format(MyThread.timeCost))
 
     def saveImage(self):
-        doSaveLocalFile(self.label_6.text(), self.filePath.name,
+        save_path = self.filePath
+        if not str(self.filePath).startswith("capture"):
+            raletivePath = self.filePath.relative_to(self.inputDir)
+            saveRoot = Path(self.label_6.text())
+            saveDir = saveRoot.joinpath(raletivePath).parent
+            if not saveDir.exists():
+                saveDir.mkdir(parents=True)
+            save_path = raletivePath
+        doSaveLocalFile(self.label_6.text(), str(save_path),
                         self.outputImage_RGB)
 
     def changeSaveDir(self):
@@ -167,10 +177,10 @@ class PyQtMainEntry(QMainWindow, Ui_MainWindow):
         filesCount = len(self.imagePaths)
         saveRoot = Path(self.label_6.text())
         for index, path in enumerate(self.imagePaths):
-            raletivePath = path.relative_to(self.inputDir)
             img = importImageFile(path)
             img = self.processMethod(img)
             img = convertBGR2RGB(img)
+            raletivePath = path.relative_to(self.inputDir)
             saveDir = saveRoot.joinpath(raletivePath).parent
             if not saveDir.exists():
                 saveDir.mkdir(parents=True)
